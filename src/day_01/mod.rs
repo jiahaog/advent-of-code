@@ -34,25 +34,16 @@ fn to_three_measurement_window_sums(input: Vec<i64>) -> Vec<i64> {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::File,
-        io::{BufRead, BufReader},
-        path::Path,
-    };
-    fn read_input() -> Vec<i64> {
-        let input_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("src")
-            .join("day_01")
-            .join("input");
+    use crate::common::read_input;
 
-        BufReader::new(File::open(input_path).unwrap())
-            .lines()
-            .map(|line| line.unwrap().parse::<i64>().unwrap())
+    fn parse_input() -> Vec<i64> {
+        read_input("day_01")
+            .map(|line| line.parse::<i64>().unwrap())
             .collect()
     }
 
     mod part_1 {
-        use crate::day_01::{num_increases, tests::read_input};
+        use crate::day_01::{num_increases, tests::parse_input};
 
         #[test]
         fn example_test() {
@@ -65,12 +56,12 @@ mod tests {
 
         #[test]
         fn solution() {
-            let input = read_input();
+            let input = parse_input();
             assert_eq!(num_increases(input), 1832);
         }
     }
     mod part_2 {
-        use crate::day_01::{num_increases_with_window, tests::read_input};
+        use crate::day_01::{num_increases_with_window, tests::parse_input};
 
         #[test]
         fn example_test() {
@@ -83,7 +74,7 @@ mod tests {
 
         #[test]
         fn solution() {
-            let input = read_input();
+            let input = parse_input();
             assert_eq!(num_increases_with_window(input), 1858);
         }
     }
