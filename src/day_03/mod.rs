@@ -34,6 +34,7 @@ fn common_in_columns(is_finding_most_common: bool, lines: &Vec<String>) -> u64 {
             // 1 0 0
             // 0 1 0
             // 0 0 1
+            // This probably isn't the best approach, see below.
             !(is_finding_most_common ^ is_most_common_one)
         })
         .fold(0, |acc, current| (acc << 1) + current as u64)
@@ -71,6 +72,60 @@ impl Iterator for Diagnostic {
     }
 }
 
+#[allow(dead_code)]
+fn life_support_rating(lines: Vec<String>) -> u64 {
+    let parsed_lines = lines
+        .into_iter()
+        .map(|line| {
+            line.chars()
+                .map(|char| match char {
+                    '0' => false,
+                    '1' => true,
+                    x => panic!("Unexpected character in line: {}", x),
+                })
+                .collect()
+        })
+        .collect::<Vec<Vec<bool>>>();
+
+    let oxygen_rating = rating(true, parsed_lines.clone());
+    let co2_rating = rating(false, parsed_lines);
+
+    oxygen_rating * co2_rating
+}
+
+fn vector_to_decimal(bits: &[bool]) -> u64 {
+    bits.into_iter()
+        .fold(0, |acc, bit| (acc << 1) + *bit as u64)
+}
+
+fn rating(is_finding_most_common: bool, mut lines: Vec<Vec<bool>>) -> u64 {
+    let mut i = 0;
+
+    loop {
+        // Don't put this in a `while` loop so `lines` isn't borrowed.
+        if lines.len() <= 1 {
+            return vector_to_decimal(lines.first().unwrap());
+        }
+
+        let sum: u64 = lines.iter().map(|line| *line.get(i).unwrap() as u64).sum();
+        let avg = sum as f64 / lines.len() as f64;
+        let is_most_common_one = avg >= 0.5;
+
+        lines.retain(|line| {
+            let bit = *line.get(i).unwrap();
+
+            let is_bit_same_as_most_common = bit == is_most_common_one;
+            if is_finding_most_common {
+                is_bit_same_as_most_common
+            } else {
+                !is_bit_same_as_most_common
+            }
+        });
+
+        i += 1;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::common::read_input;
@@ -79,12 +134,15 @@ mod tests {
         read_input("day_03").collect()
     }
 
-    mod part_1 {
-        use crate::day_03::{binary_diagnostic, tests::parse_input};
+    fn vec_string_ref_to_vec_string(vector: Vec<&str>) -> Vec<String> {
+        vector.into_iter().map(|x| x.to_string()).collect()
+    }
 
-        fn vec_string_ref_to_vec_string(vector: Vec<&str>) -> Vec<String> {
-            vector.into_iter().map(|x| x.to_string()).collect()
-        }
+    mod part_1 {
+        use crate::day_03::{
+            binary_diagnostic,
+            tests::{parse_input, vec_string_ref_to_vec_string},
+        };
 
         #[test]
         fn example_test() {
@@ -109,6 +167,28 @@ mod tests {
         #[test]
         fn solution() {
             assert_eq!(binary_diagnostic(parse_input()), 4006064);
+        }
+    }
+    mod part_2 {
+        use crate::day_03::{
+            life_support_rating,
+            tests::{parse_input, vec_string_ref_to_vec_string},
+        };
+
+        #[test]
+        fn example_test() {
+            assert_eq!(
+                life_support_rating(vec_string_ref_to_vec_string(vec![
+                    "00100", "11110", "10110", "10111", "10101", "01111", "00111", "11100",
+                    "10000", "11001", "00010", "01010",
+                ])),
+                230,
+            );
+        }
+
+        #[test]
+        fn solution() {
+            assert_eq!(life_support_rating(parse_input()), 5941884);
         }
     }
 }
