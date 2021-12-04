@@ -6,15 +6,9 @@ fn binary_diagnostic(input: Vec<String>) -> u64 {
     gamma * epsilon
 }
 
-fn common_in_columns(is_finding_most_common: bool, input: &Vec<String>) -> u64 {
-    // Reverse each line so when iterating over columns, we can left shift
-    // starting from 0 (the LSB) to summarize each column.
-    let lines_reversed = input
-        .into_iter()
-        .map(|line| line.chars().rev().collect())
-        .collect();
-
-    Diagnostic::new(lines_reversed)
+fn common_in_columns(is_finding_most_common: bool, lines: &Vec<String>) -> u64 {
+    // TODO remove this clone.
+    Diagnostic::new(lines.clone())
         .into_iter()
         .map(|column| {
             let half = column.len() / 2;
@@ -42,8 +36,7 @@ fn common_in_columns(is_finding_most_common: bool, input: &Vec<String>) -> u64 {
             // 0 0 1
             !(is_finding_most_common ^ is_most_common_one)
         })
-        .enumerate()
-        .fold(0, |acc, (i, current)| acc + ((current as u64) << i))
+        .fold(0, |acc, current| (acc << 1) + current as u64)
 }
 
 struct Diagnostic {
