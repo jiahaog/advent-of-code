@@ -4,6 +4,7 @@ use std::collections::HashSet;
 ///
 /// - Board is 5 x 5.
 /// - Board cannot have duplicate numbers.
+/// - There must be a winning board after all numbers have been drawn.
 
 #[derive(Debug)]
 struct BingoBoard([[u8; 5]; 5]);
@@ -96,7 +97,7 @@ impl<'a> Iterator for BingoBoardIter<'a> {
 }
 
 #[allow(dead_code)]
-fn bingo_score(draws: Vec<u8>, matrices: Vec<[[u8; 5]; 5]>) -> u64 {
+fn bingo_first_to_win_score(draws: Vec<u8>, matrices: Vec<[[u8; 5]; 5]>) -> u64 {
     let bingo_boards = matrices
         .into_iter()
         .map(|matrix| BingoBoard::new(matrix))
@@ -122,7 +123,51 @@ fn bingo_score(draws: Vec<u8>, matrices: Vec<[[u8; 5]; 5]>) -> u64 {
         }
     }
 
-    unimplemented!()
+    panic!("No winning boards found after all draws")
+}
+
+#[allow(dead_code)]
+fn bingo_last_to_win_score(draws: Vec<u8>, matrices: Vec<[[u8; 5]; 5]>) -> u64 {
+    let bingo_boards = matrices
+        .into_iter()
+        .map(|matrix| BingoBoard::new(matrix))
+        .collect::<Vec<BingoBoard>>();
+
+    let mut alive_board_indices: HashSet<usize> =
+        HashSet::from_iter((0..bingo_boards.len()).into_iter());
+
+    for i in 1..draws.len() {
+        let current_draws = &draws[0..i];
+
+        if alive_board_indices.len() == 1 {
+            let last_board = bingo_boards
+                .get(*alive_board_indices.iter().next().unwrap())
+                .unwrap();
+
+            let last_draw = *current_draws
+                .last()
+                .expect("There should be at least one draw");
+
+            if let Some(mark_indices) = last_board.winning_mark_indices(current_draws) {
+                return last_board.score(mark_indices, last_draw);
+            } else {
+                // Last board but not won yet.
+                continue;
+            }
+        }
+
+        for (i, board) in bingo_boards.iter().enumerate() {
+            // TODO: There's probably a data structure that faster removes
+            if !alive_board_indices.contains(&i) {
+                continue;
+            }
+            if let Some(_) = board.winning_mark_indices(current_draws) {
+                alive_board_indices.remove(&i);
+            }
+        }
+    }
+
+    panic!("No winning boards found after all draws")
 }
 
 #[cfg(test)]
@@ -154,15 +199,8 @@ mod tests {
         read_input("day_04").collect::<Vec<String>>().join("\n")
     }
 
-    mod part_1 {
-        use crate::day_04::{bingo_score, tests::parse_input};
-
-        use super::parse_input_string;
-
-        #[test]
-        fn example_test() {
-            let (draws, matrices) = parse_input_string(
-                "7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+    const EXAMPLE_INPUT: &str =
+        "7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
 
 22 13 17 11  0
  8  2 23  4 24
@@ -180,26 +218,48 @@ mod tests {
 10 16 15  9 19
 18  8 23 26 20
 22 11 13  6  5
- 2  0 12  3  7",
-            );
+ 2  0 12  3  7";
 
-            assert_eq!(bingo_score(draws, matrices), 4512);
+    mod part_1 {
+        use crate::day_04::{
+            bingo_first_to_win_score,
+            tests::{parse_input, EXAMPLE_INPUT},
+        };
+
+        use super::parse_input_string;
+
+        #[test]
+        fn example_test() {
+            let (draws, matrices) = parse_input_string(EXAMPLE_INPUT);
+
+            assert_eq!(bingo_first_to_win_score(draws, matrices), 4512);
         }
 
         #[test]
         fn solution() {
             let (draws, matrices) = parse_input_string(&parse_input());
 
-            assert_eq!(bingo_score(draws, matrices), 33462);
+            assert_eq!(bingo_first_to_win_score(draws, matrices), 33462);
         }
     }
     mod part_2 {
-        use crate::day_04::tests::parse_input;
+        use crate::day_04::{
+            bingo_last_to_win_score,
+            tests::{parse_input, parse_input_string, EXAMPLE_INPUT},
+        };
 
         #[test]
-        fn example_test() {}
+        fn example_test() {
+            let (draws, matrices) = parse_input_string(EXAMPLE_INPUT);
+
+            assert_eq!(bingo_last_to_win_score(draws, matrices), 1924);
+        }
 
         #[test]
-        fn solution() {}
+        fn solution() {
+            let (draws, matrices) = parse_input_string(&parse_input());
+
+            assert_eq!(bingo_last_to_win_score(draws, matrices), 30070);
+        }
     }
 }
